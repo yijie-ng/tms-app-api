@@ -18,6 +18,8 @@ const authentication = async (req, res, next) => {
     const password = auth[1];
     const user = {username, password};
 
+    // const { username, password } = req.params;
+
     db.query("SELECT * FROM accounts WHERE username = ?", username, (err, results) => {
         if (err) {
             res.status(401).json({ message: 'You are not authenticated!' });
@@ -26,8 +28,10 @@ const authentication = async (req, res, next) => {
                 bcrypt.compare(password, results[0].password, (err, result) => {
                     if (result) {
                         req.user = user;
+                        req.user = { username, password }
                         next();
                     } else {
+                        res.status(401).json({ message: 'Wrong username/password!' });
                         const err = new Error('Wrong username/password!');
                         res.setHeader('WWW-Authenticate', 'Basic');
                         err.status = 401;
@@ -35,6 +39,7 @@ const authentication = async (req, res, next) => {
                     };
                 });
             } else {
+                res.status(401).json({ message: 'Wrong username/password!' });
                 const err = new Error('Wrong username/password!');
                 res.setHeader('WWW-Authenticate', 'Basic');
                 err.status = 401;

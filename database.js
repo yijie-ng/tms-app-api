@@ -1,10 +1,11 @@
-const mysql = require('mysql2');
-const dotenv = require('dotenv');
+const mysql = require("mysql2");
+const dotenv = require("dotenv");
 dotenv.config();
 
 module.exports = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: process.env.MYSQL_PASSWORD,
-    database: 'tmsapp',
+  // host: 'localhost',
+  host: "host.docker.internal",
+  user: "root",
+  password: process.env.MYSQL_PASSWORD,
+  database: "tmsapp",
 });
