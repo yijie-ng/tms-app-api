@@ -1,4 +1,19 @@
 const db = require("../database");
+const nodemailer = require("nodemailer");
+const dotenv = require('dotenv');
+dotenv.config();
+const transporter = nodemailer.createTransport({
+  host: "smtp.mailtrap.io",
+  port: 2525,
+  auth: {
+    user: process.env.MAILTRAP_USER,
+    pass: process.env.MAILTRAP_PASSWORD,
+  },
+  pool: true, // use pooled connection
+  rateLimit: true, // enable to make sure limiting
+  maxConnections: 1, // set limit to 1 connection only
+  maxMessages: 1, // send 3 emails per sec
+});
 
 // Check group function
 const checkGroup = async (username, userTitle) => {
@@ -42,6 +57,32 @@ const getApp = async (appAcronym) => {
         });
     });
 };
+
+// Function to get project leads
+const projectLeadGroup = async () => {
+    return new Promise((resolve, reject) => {
+        db.query("SELECT username FROM user_title_user WHERE user_title = 'Project Lead' AND status = 'assigned'", (err, result) => {
+            if (err) {
+                resolve(false)
+            } else {
+                if (result.length > 0) {
+                    return resolve(result)
+                };
+            };
+        });
+    });
+};
+
+// Function to get user by username
+const userByUsername = async (username) => {
+    return new Promise((resolve, reject) => {
+      db.query("SELECT * FROM accounts WHERE username = ?", username, (err, result) => {
+        if (result.length > 0) {
+          return resolve(result);
+        };
+      });
+    });
+  };
 
 // POST /api/v1/task/new
 // 1. authenticate user
@@ -315,6 +356,16 @@ const createTask = async (req, res) => {
   const approveDone = async (req, res) => {
     const taskId = req.params.taskId;
     const username = req.user.username;
+    let emails = [];
+    projectLeadGroup().then(data => {
+        data.map((user) => {
+            userByUsername(user.username).then(userInfo => {
+                if (userInfo[0].status === 'active') {
+                    emails.push(userInfo[0].email);
+                };
+            });
+        });
+    });
     db.query("SELECT * FROM task WHERE task_Id = ?", taskId, (err, result) => {
       if (err) {
         res.status(400).json({ err: err });
@@ -349,6 +400,22 @@ const createTask = async (req, res) => {
                                 res.status(400).json({ err: err });
                               } else {
                                 if (result) {
+                                    emails.map((email) => {
+                                        let message = {
+                                            from: "tms@email.com",
+                                            to: email,
+                                            subject: `[For Review] '${taskId}: ${taskName}' updated to 'Done'`,
+                                            text: `'${taskId}: ${taskName}' is updated to 'Done' by ${username}. Please kindly review.`,
+                                            html: `<h1>'${taskId}: ${taskName}' is updated to 'Done' by ${username}. Please kindly review.</h1>`,
+                                          };
+                                        transporter.sendMail(message, (err, info) => {
+                                              if (err) {
+                                                console.log(err);
+                                              } else {
+                                                console.log(info);
+                                              }
+                                        });
+                                    });
                                   res
                                     .status(200)
                                     .json({ message: "Task updated to 'done'!" });

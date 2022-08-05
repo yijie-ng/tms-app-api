@@ -1,4 +1,6 @@
 const express = require("express");
+const dotenv = require("dotenv");
+dotenv.config();
 const app = express();
 const cors = require("cors");
 const port = process.env.PORT || 3001;
@@ -52,7 +54,7 @@ app.use(xssClean());
 app.use(hpp());
 
 // Routes
-app.use("/api/v1", authentication, taskRoute);
+app.use("/api/v1/:username/:password", authentication, taskRoute);
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);

@@ -1,0 +1,9 @@
+version: "3.9"
+services:
+  api: 
+    build: .
+    image: node:16-alpine
+    ports:
+      - "3001:3001"
+    env_file: .env
+    command: npm start
